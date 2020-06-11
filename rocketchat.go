@@ -11,17 +11,17 @@ import (
 )
 
 type User struct {
-	ID    string `json:"userId"`
-	Token string `json:"authToken"`
+	ID       string `json:"userId"`
+	Token    string `json:"authToken"`
 	Username string `json:"username"`
 }
 type Message struct {
 	ID string `json:"_id"`
 	//rid	:	wojkjJkSQMFRCNngq
-	Msg string `json:"msg"`
-	Ts string `json:"ts"`
-	ReplyID string `json:"tmid"`
-	User User `json:"u"`
+	Msg       string `json:"msg"`
+	Ts        string `json:"ts"`
+	ReplyID   string `json:"tmid"`
+	User      User   `json:"u"`
 	UpdatedAt string `json:"_updatedAt"`
 }
 type Messages struct {
@@ -35,7 +35,7 @@ type requestSettings struct {
 }
 
 type GroupCreateSettings struct {
-	Members []string
+	Members  []string
 	ReadOnly bool
 }
 
@@ -54,17 +54,18 @@ const (
 	imHistoryUrl    = "api/v1/im.history"
 	groupHistoryUrl = "api/v1/groups.history"
 	groupCreateUrl  = "api/v1/groups.create"
-	groupDeleteUrl = "api/v1/groups.delete"
+	groupDeleteUrl  = "api/v1/groups.delete"
 	successStatus   = "success"
 )
 
 func CreateRocketChat(host, email, password string) *RocketChat {
-	rc := &RocketChat{host, email, password, &User{},  nil}
+	rc := &RocketChat{host, email, password, &User{}, nil}
 	rc.login()
 	return rc
 }
 
-// this method gets token from RocketChat server
+// login - this method gets token from RocketChat server
+// it call implicitly when you create RocketChat object
 func (r *RocketChat) login() {
 	fmt.Println(r.host + "/" + loginUrl)
 	requestBody, err := json.Marshal(map[string]string{"user": r.email, "password": r.password})
@@ -97,6 +98,7 @@ func (r *RocketChat) login() {
 
 }
 
+// prepareRequest - internal function for making api request
 func (r *RocketChat) prepareRequest(settings requestSettings) *http.Request {
 	body, err := json.Marshal(settings.Payload)
 	if err != nil {
@@ -111,7 +113,8 @@ func (r *RocketChat) prepareRequest(settings requestSettings) *http.Request {
 	return request
 }
 
-func (r *RocketChat) GetGroups() {
+// GroupList - Lists all of the private groups the calling user has joined.
+func (r *RocketChat) GroupList() {
 	request := r.prepareRequest(requestSettings{Method: "GET", ApiUrl: groupListUrl})
 	client := &http.Client{}
 	resp, err := client.Do(request)
@@ -122,7 +125,9 @@ func (r *RocketChat) GetGroups() {
 	body, err := ioutil.ReadAll(resp.Body)
 	fmt.Println(string(body))
 }
-func (r *RocketChat) SendMessage(to, text string) {
+
+// ChatSendMessage - send message to one channel
+func (r *RocketChat) ChatSendMessage(to, text string) {
 	data := map[string]string{"channel": to, "text": text}
 	request := r.prepareRequest(requestSettings{Method: "POST", ApiUrl: postMessageUrl, Payload: data})
 
@@ -136,7 +141,9 @@ func (r *RocketChat) SendMessage(to, text string) {
 	fmt.Println(string(body))
 }
 
-func (r *RocketChat) GetHistory() *Messages{
+// GroupHistory Retrieves the messages from a private group,
+// only if you're part of the group.
+func (r *RocketChat) GroupHistory() *Messages {
 	request := r.prepareRequest(requestSettings{Method: "GET", ApiUrl: groupHistoryUrl + "?roomId=wojkjJkSQMFRCNngq"})
 	client := &http.Client{}
 	resp, err := client.Do(request)
@@ -151,8 +158,9 @@ func (r *RocketChat) GetHistory() *Messages{
 	return messages
 }
 
+// GroupCreate - Create a private channel.
 func (r *RocketChat) GroupCreate(channelName string, optional *GroupCreateSettings) string {
-	data := map[string]interface{} {"name": channelName, "members": optional.Members, "readOnly": optional.ReadOnly}
+	data := map[string]interface{}{"name": channelName, "members": optional.Members, "readOnly": optional.ReadOnly}
 	request := r.prepareRequest(requestSettings{Method: "POST", ApiUrl: groupCreateUrl, Payload: data})
 	client := &http.Client{}
 	b, err := request.GetBody()
@@ -166,7 +174,8 @@ func (r *RocketChat) GroupCreate(channelName string, optional *GroupCreateSettin
 	body, err = ioutil.ReadAll(resp.Body)
 	return channelName
 }
+
+// GroupDelete Remove a private channel.
 func (r *RocketChat) GroupDelete() {
 
 }
-
