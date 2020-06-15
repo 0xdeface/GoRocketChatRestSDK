@@ -24,6 +24,7 @@ type Message struct {
 	User      User   `json:"u"`
 	UpdatedAt string `json:"_updatedAt"`
 }
+
 type Messages struct {
 	Messages []Message `json:"messages"`
 }
@@ -35,10 +36,18 @@ type requestSettings struct {
 }
 
 type GroupCreateSettings struct {
-	Members  []string
-	ReadOnly bool
+	Name     string   `json:"name"`     // The name of the new private group
+	Members  []string `json:"members"`  // The users to add to the group when it is created.
+	ReadOnly bool     `json:"readOnly"` //
+}
+type MethodResult struct {
+	Success bool `json:"success"`
 }
 
+type GroupDeleteSettings struct {
+	RoomId   string `json:"roomId"`
+	RoomName string `json:"roomName"`
+}
 type RocketChat struct {
 	host        string
 	email       string
@@ -159,23 +168,31 @@ func (r *RocketChat) GroupHistory() *Messages {
 }
 
 // GroupCreate - Create a private channel.
-func (r *RocketChat) GroupCreate(channelName string, optional *GroupCreateSettings) string {
-	data := map[string]interface{}{"name": channelName, "members": optional.Members, "readOnly": optional.ReadOnly}
-	request := r.prepareRequest(requestSettings{Method: "POST", ApiUrl: groupCreateUrl, Payload: data})
+func (r *RocketChat) GroupCreate(options *GroupCreateSettings) *MethodResult {
+	request := r.prepareRequest(requestSettings{Method: "POST", ApiUrl: groupCreateUrl, Payload: options})
 	client := &http.Client{}
-	b, err := request.GetBody()
-	body, err := ioutil.ReadAll(b)
-	fmt.Println(string(body))
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body)
-	return channelName
+	body, err := ioutil.ReadAll(resp.Body)
+	mr := &MethodResult{}
+	json.Unmarshal(body, mr)
+	return mr
 }
 
 // GroupDelete Remove a private channel.
-func (r *RocketChat) GroupDelete() {
-
+func (r *RocketChat) GroupDelete(options *GroupDeleteSettings) *MethodResult {
+	request := r.prepareRequest(requestSettings{Method: "POST", ApiUrl: groupDeleteUrl, Payload: options})
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	mr := &MethodResult{}
+	json.Unmarshal(body, mr)
+	return mr
 }
